@@ -1,0 +1,99 @@
+#Loading excel and forecast packages
+library(readxl)
+library(forecast)
+
+#importing excel file
+FRED <- read.csv("C:/Users/Veere/Downloads/fred.csv")
+
+#DEFINE TIME SERIES
+CPI = FRED$Consumer.Price.Index
+CV <- length(CPI)
+
+#timeseries creation for consumer price index
+CPI.ts <- ts(CPI, start = c(2009,2), end = c(2023,1), freq = 12)
+
+CPI.data <- data.frame(CPI)
+
+# DESCRIPTIVE STATISTICS
+# NOTE:  I am using "pastecs" package for this
+# install.packages(pastecs) # <--- if necessary
+library(pastecs)
+ds <- stat.desc(CPI.data, basic = F)
+round(ds, 5)
+
+# DATA PLOTS
+
+#Raw data
+plot(CPI.ts, type = 'l', xlab = 'Date', ylab = 'CPI', main = 'CPI History', lty = 1, lwd = 2, col = 'red')
+
+
+# REGRESSION MODELS
+
+library(forecast)
+
+train.ts <- window(CPI.ts, start = c(2009, 1), end = c(2023, nTrain))
+valid.ts <- window(NX.ts, start = c(2009, nTrain + 1), end = c(2023, nTrain + nValid))
+nValid <- 60
+train.lm.linear.trend <- tslm(train.ts ~ trend)
+train.lm.linear.trend.pred <- forecast(train.lm.linear.trend, h = nValid, level = 0)
+train.lm.expo.trend <- tslm(train.ts ~ trend + I(trend^2))
+train.lm.expo.trend.pred <- forecast(train.lm.expo.trend, h = nValid, level = 0)
+
+summary(train.lm.expo.trend)
+summary(train.lm.linear.trend)
+
+accuracy(train.lm.linear.trend.pred)
+accuracy(train.lm.expo.trend.pred)
+
+# RECREATE FIG. 6.4 FOR SPOT RATE DATA
+
+plot(train.ts, ylim = c(-1, 1),  ylab = " ", xlab = "Date", bty = "l", xaxt = "n", xlim = c(2009,2023), lwd= 2, main = "Consumer Price Index & Forecasts", lty = 1)
+axis(1, at = seq(2009, 2028, 1), labels = format(seq(2009, 2028, 1)))
+lines(train.lm.linear.trend.pred$fitted, lwd = 2, col = "red", lty = 3)
+lines(train.lm.linear.trend.pred$mean, lwd = 2, col = "red", lty = 3)
+lines(train.lm.expo.trend.pred$fitted, lwd = 2, col = "blue")  # Added in 6-4
+lines(train.lm.expo.trend.pred$mean, lwd = 2, col = "blue")
+lines(c(2023 - nValid/12, 2023 - nValid/12), c(-1, 1)) 
+lines(c(2023, 2023), c(-1, 1))
+text(2012, 0.4, "Training")
+text(2023 - nValid/12/2, 0.5, "Validation")
+text(2026, 0.8, "Future")
+arrows(2009, 0.3, 2023 - nValid/12, 0.3, code = 3, length = 0.1, lwd = 1,angle = 25)
+arrows(2023 - nValid/12, 0.4, 2023, 0.4, code = 3, length = 0.1, lwd = 1,angle = 25)
+arrows(2023, 0.7, 2023 + nValid/12, 0.7, code = 3, length = 0.1, lwd = 1,angle = 25)
+
+
+# RECREATE FIG. 6.6 FOR SPOT DATA
+# RESIDUALS
+
+par(mfrow = c(2,1))
+plot(train.ts, ylim = c(-1, 1),  ylab = " ", xlab = "Date", bty = "l", xaxt = "n", xlim = c(2009,2028), lwd= 2, main = "Consumer Price Index & Forecasts", lty = 1)
+axis(1, at = seq(2009, 2028, 1), labels = format(seq(2009, 2028, 1)))
+lines(train.lm.linear.trend.pred$fitted, lwd = 2, col = "red", lty = 3)
+lines(train.lm.linear.trend.pred$mean, lwd = 2, col = "red", lty = 3)
+lines(train.lm.expo.trend.pred$fitted, lwd = 2, col = "blue")  # Added in 6-4
+lines(train.lm.expo.trend.pred$mean, lwd = 2, col = "blue")
+lines(c(2023 - nValid/12, 2023 - nValid/12), c(-1, 1)) 
+lines(c(2023, 2023), c(-1, 1))
+text(2009, 0.3, "Training")
+text(2023 - nValid/12/2, 0.6, "Validation")
+text(2026, 0.8, "Future")
+arrows(1990, 0.4, 2023 - nValid/12, 0.4, code = 3, length = 0.1, lwd = 1,angle = 25)
+arrows(2023 - nValid/12, 0.5, 2023, 0.5, code = 3, length = 0.1, lwd = 1,angle = 25)
+arrows(2023, 0.7, 2023 + nValid/12, 0.7, code = 3, length = 0.1, lwd = 1,angle = 25)
+
+
+plot(train.lm.linear.trend.pred$residuals, ylim = c(-1, 1), ylab = "", xlab = "Date", bty = "l", xaxt = "n", xlim = c(2009,2028), lwd= 2, main = "Residuals", col = "red")
+axis(1, at = seq(2009, 2028, 1), labels = format(seq(2009, 2028, 1)))
+lines(valid.ts - train.lm.linear.trend.pred$mean, lwd= 2, col = "red")
+lines(train.lm.expo.trend.pred$residuals, lwd= 2, col = "blue")
+lines(valid.ts - train.lm.expo.trend.pred$mean, lwd = 2, col = "blue")
+lines(c(2021+8/12 - nValid/12, 2021+8/12 - nValid/12), c(-2, 2)) 
+lines(c(2023 - nValid/12, 2023 - nValid/12), c(-1, 1)) 
+lines(c(2023, 2023), c(-1, 1))
+text(2009, 0.3, "Training")
+text(2023 - nValid/12/2, 0.6, "Validation")
+text(2026, 0.8, "Future")
+arrows(2009, 0.4, 2023 - nValid/12, 0.4, code = 3, length = 0.1, lwd = 1,angle = 25)
+arrows(2023 - nValid/12, 0.7, 2023, 0.7, code = 3, length = 0.1, lwd = 1,angle = 25)
+arrows(2023, 0.9, 2023 + nValid/12, 0.9, code = 3, length = 0.1, lwd = 1,angle = 25)
